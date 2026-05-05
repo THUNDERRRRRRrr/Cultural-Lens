@@ -165,9 +165,9 @@ async function callGemini(base64Image) {
  * @returns {Promise<{data: object, usedAPI: string}>}
  */
 export async function analyzeMonument(base64Image) {
-  // Step 1: Check localStorage cache
+  // Step 1: Check localStorage cache (v2 = SHA-256 hash, invalidates old broken entries)
   const imageHash = await generateHash(base64Image);
-  const cacheKey = `cultural_lens_${imageHash}`;
+  const cacheKey = `cl_v2_${imageHash}`;
   const cached = localStorage.getItem(cacheKey);
   if (cached) {
     console.log('🗂️  Returning cached result');

@@ -48,11 +48,30 @@ export const compressImage = (file, maxSize = 1024, quality = 0.8) => {
 };
 
 /**
- * Generate a quick, cheap hash from a base64 string for use as a cache key.
- * Uses a 100-char substring — good enough for demo / hackathon purposes.
+ * Generate a reliable hash from a base64 string using SHA-256 (Web Crypto API).
+ * Falls back to a multi-sample substring approach if crypto is unavailable.
  * @param {string} base64String
  * @returns {Promise<string>}
  */
 export async function generateHash(base64String) {
-  return base64String.substring(50, 150).replace(/[^a-zA-Z0-9]/g, '');
+  try {
+    // Use SHA-256 for a collision-free hash
+    const encoder = new TextEncoder();
+    const data = encoder.encode(base64String);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  } catch {
+    // Fallback: sample multiple parts of the string for uniqueness
+    const len = base64String.length;
+    const sample = [
+      base64String.substring(0, 32),
+      base64String.substring(Math.floor(len * 0.25), Math.floor(len * 0.25) + 32),
+      base64String.substring(Math.floor(len * 0.5), Math.floor(len * 0.5) + 32),
+      base64String.substring(Math.floor(len * 0.75), Math.floor(len * 0.75) + 32),
+      base64String.substring(len - 32),
+      String(len)
+    ].join('');
+    return sample.replace(/[^a-zA-Z0-9]/g, '');
+  }
 }
