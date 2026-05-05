@@ -24,14 +24,28 @@ markdown, no backticks, no extra text:
  * @returns {object}
  */
 function parseMonumentResponse(rawText) {
+  // Strip markdown fences if present
+  let text = rawText
+    .replace(/```json/gi, '')
+    .replace(/```/g, '')
+    .trim();
+
   try {
-    return JSON.parse(rawText);
+    return JSON.parse(text);
   } catch {
-    const cleaned = rawText
-      .replace(/```json/gi, '')
-      .replace(/```/g, '')
-      .trim();
-    return JSON.parse(cleaned);
+    // The JSON may be truncated — try to repair by closing open strings/objects
+    // Remove any trailing incomplete key-value pair
+    text = text.replace(/,\s*"[^"]*"?\s*:?\s*"?[^}]*$/, '');
+    // Close any unclosed strings, arrays, objects
+    const opens = (text.match(/{/g) || []).length;
+    const closes = (text.match(/}/g) || []).length;
+    const arrOpens = (text.match(/\[/g) || []).length;
+    const arrCloses = (text.match(/]/g) || []).length;
+    // Close trailing open string if needed
+    if ((text.match(/"/g) || []).length % 2 !== 0) text += '"';
+    for (let i = 0; i < arrOpens - arrCloses; i++) text += ']';
+    for (let i = 0; i < opens - closes; i++) text += '}';
+    return JSON.parse(text);
   }
 }
 
@@ -60,7 +74,7 @@ async function callGroq(base64Image) {
           { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${base64Image}` } }
         ]
       }],
-      max_tokens: 1024,
+      max_tokens: 4096,
       temperature: 0.7
     })
   });
@@ -71,6 +85,9 @@ async function callGroq(base64Image) {
   }
 
   const data = await response.json();
+  if (data.choices[0].finish_reason === 'length') {
+    console.warn('⚠️  Groq response was truncated (hit token limit)');
+  }
   return data.choices[0].message.content;
 }
 
@@ -99,7 +116,7 @@ async function callOpenRouter(base64Image) {
           { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${base64Image}` } }
         ]
       }],
-      max_tokens: 1024
+      max_tokens: 4096
     })
   });
 
@@ -109,6 +126,9 @@ async function callOpenRouter(base64Image) {
   }
 
   const data = await response.json();
+  if (data.choices[0].finish_reason === 'length') {
+    console.warn('⚠️  OpenRouter response was truncated (hit token limit)');
+  }
   return data.choices[0].message.content;
 }
 
