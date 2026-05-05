@@ -49,12 +49,8 @@ function parseMonumentResponse(rawText) {
   }
 }
 
-// ─── Individual API callers ──────────────────────────────────────────────────
+// ─── Vision API callers (for image analysis) ─────────────────────────────────
 
-/**
- * Call Groq (primary — fastest, free).
- * Model: meta-llama/llama-4-scout-17b-16e-instruct (vision-capable)
- */
 async function callGroq(base64Image) {
   const apiKey = import.meta.env.VITE_GROQ_KEY;
   if (!apiKey) throw new Error('VITE_GROQ_KEY not set');
@@ -91,10 +87,6 @@ async function callGroq(base64Image) {
   return data.choices[0].message.content;
 }
 
-/**
- * Call OpenRouter (fallback — free credits).
- * Model: meta-llama/llama-3.2-11b-vision-instruct:free
- */
 async function callOpenRouter(base64Image) {
   const apiKey = import.meta.env.VITE_OPENROUTER_KEY;
   if (!apiKey) throw new Error('VITE_OPENROUTER_KEY not set');
@@ -132,10 +124,6 @@ async function callOpenRouter(base64Image) {
   return data.choices[0].message.content;
 }
 
-/**
- * Call Gemini (last resort — existing implementation).
- * Model: gemini-flash-latest
- */
 async function callGemini(base64Image) {
   const apiKey = import.meta.env.VITE_GEMINI_KEY;
   if (!apiKey) throw new Error('VITE_GEMINI_KEY not set');
@@ -156,7 +144,7 @@ async function callGemini(base64Image) {
   return await result.response.text();
 }
 
-// ─── Main orchestrator ───────────────────────────────────────────────────────
+// ─── Image analysis orchestrator ─────────────────────────────────────────────
 
 /**
  * Analyse a monument image with a three-tier API fallback and localStorage cache.
@@ -212,5 +200,128 @@ export async function analyzeMonument(base64Image) {
   }
 
   console.log(`✅ Success using ${usedAPI}`);
+  return { data: parsed, usedAPI };
+}
+
+// ─── Text-only analysis (for nearby place cards) ─────────────────────────────
+
+const PLACE_PROMPT = `You are a world-class immersive cultural narrator for a tourism app.
+I will tell you the name and coordinates of a cultural site. Respond ONLY in this exact JSON format with no
+markdown, no backticks, no extra text:
+{
+  "name": "Monument or place name",
+  "location": "City, Country",
+  "narration": "Three paragraphs of cinematic, emotional, immersive narration about this place. Write like a movie narrator — evocative, dramatic, inspiring. Minimum 200 words.",
+  "funFacts": ["fact 1", "fact 2", "fact 3"],
+  "timeline": [
+    {"year": "year", "event": "what happened"},
+    {"year": "year", "event": "what happened"},
+    {"year": "year", "event": "what happened"}
+  ],
+  "hindiNarration": "Same narration translated to Hindi",
+  "bengaliNarration": "Same narration translated to Bengali"
+}`;
+
+async function callGroqText(prompt) {
+  const apiKey = import.meta.env.VITE_GROQ_KEY;
+  if (!apiKey) throw new Error('VITE_GROQ_KEY not set');
+
+  const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'llama-3.3-70b-versatile',
+      messages: [{ role: 'user', content: prompt }],
+      max_tokens: 4096,
+      temperature: 0.7
+    })
+  });
+  if (!response.ok) throw new Error(`Groq text ${response.status}`);
+  const data = await response.json();
+  return data.choices[0].message.content;
+}
+
+async function callOpenRouterText(prompt) {
+  const apiKey = import.meta.env.VITE_OPENROUTER_KEY;
+  if (!apiKey) throw new Error('VITE_OPENROUTER_KEY not set');
+
+  const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+      'HTTP-Referer': 'https://cultural-lens.vercel.app',
+      'X-Title': 'Cultural Lens'
+    },
+    body: JSON.stringify({
+      model: 'meta-llama/llama-3.1-8b-instruct:free',
+      messages: [{ role: 'user', content: prompt }],
+      max_tokens: 4096
+    })
+  });
+  if (!response.ok) throw new Error(`OpenRouter text ${response.status}`);
+  const data = await response.json();
+  return data.choices[0].message.content;
+}
+
+async function callGeminiText(prompt) {
+  const apiKey = import.meta.env.VITE_GEMINI_KEY;
+  if (!apiKey) throw new Error('VITE_GEMINI_KEY not set');
+
+  const genAI = new GoogleGenerativeAI(apiKey);
+  const model = genAI.getGenerativeModel({ model: 'gemini-flash-latest' });
+  const result = await model.generateContent(prompt);
+  return await result.response.text();
+}
+
+/**
+ * Analyse a place by name + coordinates (no image) with three-tier fallback and caching.
+ */
+export async function analyzePlaceName(placeName, lat, lng) {
+  const cacheKey = `cl_v2_place_${placeName.replace(/\s+/g, '_').toLowerCase()}`;
+  const cached = localStorage.getItem(cacheKey);
+  if (cached) {
+    console.log('🗂️  Returning cached place result');
+    const parsed = JSON.parse(cached);
+    return { data: parsed.data ?? parsed, usedAPI: parsed.usedAPI ?? 'Cache' };
+  }
+
+  const coords = (lat && lng) ? `Coordinates: ${lat}, ${lng}` : '';
+  const fullPrompt = `${PLACE_PROMPT}\n\nThe place is: "${placeName}"\n${coords}`;
+
+  const apis = [
+    { name: 'Groq', fn: () => callGroqText(fullPrompt) },
+    { name: 'OpenRouter', fn: () => callOpenRouterText(fullPrompt) },
+    { name: 'Gemini', fn: () => callGeminiText(fullPrompt) }
+  ];
+
+  let rawText = null;
+  let usedAPI = '';
+  let lastError = null;
+
+  for (const api of apis) {
+    try {
+      rawText = await api.fn();
+      usedAPI = api.name;
+      break;
+    } catch (err) {
+      console.warn(`⚠️  ${api.name} failed:`, err.message);
+      lastError = err;
+    }
+  }
+
+  if (!rawText) {
+    throw new Error('All APIs failed. Please try again later.', { cause: lastError });
+  }
+
+  const parsed = parseMonumentResponse(rawText);
+
+  try {
+    localStorage.setItem(cacheKey, JSON.stringify({ data: parsed, usedAPI }));
+  } catch (e) {
+    console.warn('Cache write failed', e.message);
+  }
+
+  console.log(`✅ Place analysis success using ${usedAPI}`);
   return { data: parsed, usedAPI };
 }

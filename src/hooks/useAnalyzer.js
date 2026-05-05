@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { compressImage } from '../utils/imageUtils';
-import { analyzeMonument } from '../utils/apiHandler';
+import { analyzeMonument, analyzePlaceName } from '../utils/apiHandler';
 
 export const useAnalyzer = () => {
   const [loading, setLoading] = useState(false);
@@ -32,5 +32,28 @@ export const useAnalyzer = () => {
     }
   };
 
-  return { analyzeImage, loading, error, result, setResult, usedAPI };
+  const analyzeByName = async (placeName, lat, lng) => {
+    setLoading(true);
+    setError(null);
+    setResult(null);
+    setUsedAPI('');
+
+    try {
+      const { data, usedAPI: api } = await analyzePlaceName(placeName, lat, lng);
+
+      if (!data || !data.name || !data.narration) {
+        setError("Couldn't generate information about this place. Please try again.");
+      } else {
+        setResult(data);
+        setUsedAPI(api);
+      }
+    } catch (err) {
+      console.error(err);
+      setError(err.message || 'An error occurred. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return { analyzeImage, analyzeByName, loading, error, result, setResult, setError, usedAPI };
 };

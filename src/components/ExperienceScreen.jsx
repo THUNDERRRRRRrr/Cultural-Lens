@@ -88,11 +88,17 @@ const ExperienceScreen = ({ data, imageUrl, onBack, usedAPI }) => {
         {/* Left Column: Image & Basic Info */}
         <div className="lg:col-span-5 flex flex-col gap-6">
           <div className="relative rounded-3xl overflow-hidden border border-primary shadow-[0_0_40px_rgba(124,58,237,0.2)] aspect-[4/5] bg-black">
-            <img 
-              src={imageUrl} 
-              alt={data.name} 
-              className="w-full h-full object-cover opacity-90"
-            />
+            {imageUrl ? (
+              <img 
+                src={imageUrl} 
+                alt={data.name} 
+                className="w-full h-full object-cover opacity-90"
+              />
+            ) : (
+              <div className="w-full h-full bg-gradient-to-br from-primary/50 via-primary/20 to-secondary/40 flex items-center justify-center">
+                <span className="text-[120px] font-bold text-white/15 select-none">{data.name?.charAt(0)}</span>
+              </div>
+            )}
             <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent"></div>
             
             <div className="absolute bottom-0 left-0 right-0 p-6">
