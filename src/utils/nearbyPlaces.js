@@ -3,21 +3,7 @@
  * Free, no API key needed.
  */
 export async function fetchNearbyPlaces(lat, lng) {
-  const query = `
-    [out:json][timeout:10];
-    (
-      node["tourism"~"museum|attraction|artwork|monument|gallery"](around:3000,${lat},${lng});
-      node["historic"~"monument|memorial|ruins|castle|building"](around:3000,${lat},${lng});
-      node["amenity"~"place_of_worship"](around:3000,${lat},${lng});
-    );
-    out 12;
-  `;
-
-  const response = await fetch('https://overpass-api.de/api/interpreter', {
-    method: 'POST',
-    body: query,
-  });
-
+  const response = await fetch(`/api/nearby?lat=${lat}&lng=${lng}`);
   const data = await response.json();
 
   return data.elements
@@ -83,10 +69,7 @@ export async function fetchPlacePhoto(placeName) {
  */
 export async function fetchCityName(lat, lng) {
   try {
-    const res = await fetch(
-      `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`,
-      { headers: { 'User-Agent': 'CulturalLens/1.0' } }
-    );
+    const res = await fetch(`/api/geocode?lat=${lat}&lng=${lng}`);
     const data = await res.json();
     return (
       data.address?.city ||
@@ -109,10 +92,7 @@ export async function fetchCityName(lat, lng) {
 export async function searchCities(query) {
   if (!query || query.length < 2) return [];
   try {
-    const res = await fetch(
-      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=5&addressdetails=1`,
-      { headers: { 'User-Agent': 'CulturalLens/1.0' } }
-    );
+    const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
     if (!res.ok) return [];
     const data = await res.json();
     return data.map((item) => ({
