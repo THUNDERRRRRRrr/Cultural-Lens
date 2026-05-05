@@ -1,95 +1,123 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Upload, Camera, MapPin, Settings, X, Sparkles, RefreshCw } from 'lucide-react';
+import { X, Sparkles, Pencil } from 'lucide-react';
 import { useNearbyPlaces } from '../hooks/useNearbyPlaces';
-import { fetchPlacePhoto, formatDistance } from '../utils/nearbyPlaces';
+import { useLocation } from '../hooks/useLocation';
+import { fetchPlacePhoto } from '../utils/nearbyPlaces';
+import LocationPicker from './LocationPicker';
 
-// ─── Background Orbs ────────────────────────────────────────────────────────
+// ─── Ken Burns hero images (Wikimedia Commons, free) ─────────────────────────
 
-const BackgroundOrbs = () => (
-  <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
-    <div className="orb orb-purple" />
-    <div className="orb orb-cyan" />
-  </div>
-);
+const HERO_IMAGES = [
+  'https://upload.wikimedia.org/wikipedia/commons/thumb/e/ec/Mona_Lisa%2C_by_Leonardo_da_Vinci%2C_from_C2RMF_retouched.jpg/800px-Mona_Lisa%2C_by_Leonardo_da_Vinci%2C_from_C2RMF_retouched.jpg',
+  'https://upload.wikimedia.org/wikipedia/commons/thumb/3/30/Vincent_van_Gogh_-_Starry_Night_-_Google_Art_Project.jpg/1280px-Vincent_van_Gogh_-_Starry_Night_-_Google_Art_Project.jpg',
+  'https://upload.wikimedia.org/wikipedia/commons/thumb/f/f4/The_Scream.jpg/800px-The_Scream.jpg',
+  'https://upload.wikimedia.org/wikipedia/commons/thumb/1/1e/Vittore_Carpaccio_-_The_Legend_of_Saint_Ursula_-_WGA04311.jpg/1280px-Vittore_Carpaccio_-_The_Legend_of_Saint_Ursula_-_WGA04311.jpg',
+];
+
+// ─── Hero Background ─────────────────────────────────────────────────────────
+
+const HeroBackground = () => {
+  const [currentIdx, setCurrentIdx] = useState(0);
+  const [loaded, setLoaded] = useState({});
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentIdx((prev) => (prev + 1) % HERO_IMAGES.length);
+    }, 5000);
+    return () => clearInterval(timer);
+  }, []);
+
+  return (
+    <div className="absolute inset-0 overflow-hidden">
+      {HERO_IMAGES.map((src, i) => (
+        <img
+          key={i}
+          src={src}
+          alt=""
+          onLoad={() => setLoaded((p) => ({ ...p, [i]: true }))}
+          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-[1200ms] ${
+            i === currentIdx && loaded[i] ? 'opacity-100 ken-burns' : 'opacity-0'
+          }`}
+          style={{ animationDuration: '6s' }}
+        />
+      ))}
+      <div
+        className="absolute inset-0"
+        style={{
+          background: 'linear-gradient(to bottom, rgba(13,13,13,0.3) 0%, rgba(13,13,13,0.55) 50%, rgba(13,13,13,1) 100%)',
+        }}
+      />
+      <div className="absolute inset-0" style={{ boxShadow: 'inset 0 0 200px rgba(0,0,0,0.5)' }} />
+    </div>
+  );
+};
 
 // ─── Skeleton Card ───────────────────────────────────────────────────────────
 
 const SkeletonCard = ({ index }) => (
   <motion.div
-    initial={{ opacity: 0, x: 30 }}
-    animate={{ opacity: 1, x: 0 }}
-    transition={{ delay: index * 0.08 }}
-    className="flex-shrink-0 w-[160px] h-[220px] rounded-2xl skeleton-shimmer"
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ delay: index * 0.08, duration: 0.5 }}
+    className="flex-shrink-0 w-[200px] h-[280px] skeleton-shimmer"
   />
 );
 
-// ─── Place Card (with lazy Wikimedia photo) ──────────────────────────────────
+// ─── Place Card — Editorial ──────────────────────────────────────────────────
 
 const PlaceCard = ({ place, index, onClick }) => {
   const [photoUrl, setPhotoUrl] = useState(null);
-  const [photoLoading, setPhotoLoading] = useState(true);
+  const [photoLoaded, setPhotoLoaded] = useState(false);
 
-  // Lazy-load photo from Wikimedia
   useEffect(() => {
     let cancelled = false;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setPhotoUrl(null);
+     
+    setPhotoLoaded(false);
     fetchPlacePhoto(place.name).then((url) => {
-      if (!cancelled) {
-        setPhotoUrl(url);
-        setPhotoLoading(false);
-      }
+      if (!cancelled) setPhotoUrl(url);
     });
     return () => { cancelled = true; };
   }, [place.name]);
 
-  const distanceLabel = formatDistance(place.distance);
+
 
   return (
     <motion.button
-      initial={{ opacity: 0, x: 40 }}
-      animate={{ opacity: 1, x: 0 }}
-      transition={{ delay: 0.15 + index * 0.07, type: 'spring', stiffness: 200 }}
-      whileHover={{ scale: 1.05 }}
-      whileTap={{ scale: 0.95 }}
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.2 + index * 0.08, duration: 0.5 }}
       onClick={onClick}
-      className="flex-shrink-0 w-[160px] h-[220px] rounded-2xl relative overflow-hidden border border-white/10
-                 hover:shadow-[0_0_25px_rgba(124,58,237,0.3)] transition-shadow cursor-pointer text-left group"
+      className="flex-shrink-0 w-[200px] h-[280px] bg-bg-card relative overflow-hidden text-left group cursor-pointer"
     >
-      {/* Card background: shimmer → photo → gradient fallback */}
-      {photoLoading ? (
-        <div className="absolute inset-0 skeleton-shimmer" />
-      ) : photoUrl ? (
-        <img src={photoUrl} alt={place.name} className="absolute inset-0 w-full h-full object-cover" />
-      ) : (
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/60 via-primary/30 to-secondary/50 flex items-center justify-center">
-          <span className="text-6xl font-bold text-white/20 group-hover:text-white/30 transition-colors select-none">
-            {place.name.charAt(0)}
-          </span>
-        </div>
-      )}
-
-      {/* Dark gradient overlay */}
-      <div
-        className="absolute inset-0"
-        style={{
-          background: 'linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.4) 50%, transparent 100%)',
-        }}
-      />
-
-      {/* Category icon */}
-      <span className="absolute top-2.5 right-2.5 text-lg select-none drop-shadow-lg">
-        {place.typeIcon}
-      </span>
-
-      {/* Bottom info */}
-      <div className="absolute bottom-0 left-0 right-0 p-3">
-        <p className="text-white font-semibold text-sm leading-tight line-clamp-2 mb-1.5">
-          {place.name}
-        </p>
-        <span className="inline-block px-2 py-0.5 bg-secondary/30 text-secondary text-[11px] font-medium rounded-full border border-secondary/30">
-          {distanceLabel}
-        </span>
+      <div className="h-[65%] overflow-hidden relative bg-bg-secondary">
+        {photoUrl ? (
+          <img
+            src={photoUrl}
+            alt={place.name}
+            onLoad={() => setPhotoLoaded(true)}
+            className={`w-full h-full object-cover transition-all duration-500 group-hover:scale-[1.08] ${
+              photoLoaded ? 'opacity-100' : 'opacity-0'
+            }`}
+          />
+        ) : (
+          <div className="w-full h-full bg-bg-secondary flex items-center justify-center">
+            <span className="text-5xl font-display text-text-muted/30 select-none">{place.name.charAt(0)}</span>
+          </div>
+        )}
+        {!photoLoaded && photoUrl && <div className="absolute inset-0 skeleton-shimmer" />}
       </div>
+
+      <div className="h-[35%] p-3 flex flex-col justify-center">
+        <span className="label-gold mb-1">{place.type.toUpperCase()}</span>
+        <h3 className="font-display text-base text-text-primary leading-tight line-clamp-2 group-hover:text-gold transition-colors duration-300">
+          {place.name}
+        </h3>
+      </div>
+
+      <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-gold scale-x-0 group-hover:scale-x-100 transition-transform duration-400 origin-left" />
     </motion.button>
   );
 };
@@ -101,30 +129,23 @@ const ImagePreviewOverlay = ({ previewUrl, onDiscover, onClose }) => (
     initial={{ y: '100%' }}
     animate={{ y: 0 }}
     exit={{ y: '100%' }}
-    transition={{ type: 'spring', damping: 28, stiffness: 300 }}
-    className="fixed inset-0 z-50 bg-background/95 backdrop-blur-xl flex flex-col p-4"
+    transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+    className="fixed inset-0 z-50 bg-background/98 backdrop-blur-xl flex flex-col p-6"
   >
-    <button
-      onClick={onClose}
-      className="self-start p-2 text-gray-400 hover:text-white transition-colors mb-4"
-    >
-      <X size={24} />
+    <button onClick={onClose} className="self-start p-2 text-text-secondary hover:text-text-primary transition-colors mb-6">
+      <X size={20} />
     </button>
-
-    <div className="flex-1 flex flex-col items-center justify-center gap-8 max-w-xl mx-auto w-full">
-      <div className="relative w-full aspect-video rounded-2xl overflow-hidden border border-primary shadow-[0_0_30px_rgba(124,58,237,0.2)]">
+    <div className="flex-1 flex flex-col items-center justify-center gap-10 max-w-2xl mx-auto w-full">
+      <div className="relative w-full aspect-video overflow-hidden border border-border-subtle">
         <img src={previewUrl} alt="Preview" className="w-full h-full object-contain bg-black/50" />
       </div>
-
-      <motion.button
-        whileHover={{ scale: 1.05, boxShadow: '0 0 20px rgba(124, 58, 237, 0.6)' }}
-        whileTap={{ scale: 0.95 }}
+      <button
         onClick={onDiscover}
-        className="flex items-center gap-2 px-10 py-4 bg-gradient-to-r from-primary to-secondary text-white font-bold rounded-full text-lg shadow-lg"
+        className="flex items-center gap-3 px-8 py-3.5 bg-gold text-background font-sans text-xs uppercase tracking-widest font-medium hover:bg-gold-light transition-colors duration-300"
       >
-        <Sparkles size={24} />
+        <Sparkles size={16} />
         Discover Story
-      </motion.button>
+      </button>
     </div>
   </motion.div>
 );
@@ -134,26 +155,12 @@ const ImagePreviewOverlay = ({ previewUrl, onDiscover, onClose }) => (
 // ═════════════════════════════════════════════════════════════════════════════
 
 const DiscoveryScreen = ({ onAnalyzeImage, onAnalyzePlace }) => {
-  const { places, loading: placesLoading, cityName, error: placesError } = useNearbyPlaces();
+  const { location, cityName, setManualLocation, resetToGPS } = useLocation();
+  const { places, loading: placesLoading, error: placesError } = useNearbyPlaces(location);
+
   const [selectedFile, setSelectedFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
-  const [particles, setParticles] = useState([]);
-
-  // Generate particles on mount
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setParticles(
-      [...Array(12)].map(() => ({
-        left: `${Math.random() * 100}%`,
-        width: `${Math.random() * 6 + 3}px`,
-        height: `${Math.random() * 6 + 3}px`,
-        animationDelay: `${Math.random() * 15}s`,
-        animationDuration: `${Math.random() * 10 + 10}s`,
-      }))
-    );
-  }, []);
-
-  // ── File selection ──────────────────────────────────────────────────────
+  const [locationPickerOpen, setLocationPickerOpen] = useState(false);
 
   const handleFileSelect = (e) => {
     const file = e.target.files?.[0];
@@ -175,8 +182,6 @@ const DiscoveryScreen = ({ onAnalyzeImage, onAnalyzePlace }) => {
     }
   };
 
-  // ── Render ──────────────────────────────────────────────────────────────
-
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -184,87 +189,74 @@ const DiscoveryScreen = ({ onAnalyzeImage, onAnalyzePlace }) => {
       exit={{ opacity: 0 }}
       className="min-h-screen bg-background relative"
     >
-      <BackgroundOrbs />
+      {/* ─── Hero Section ───────────────────────────────────────────── */}
+      <section className="relative min-h-[65vh] flex items-end">
+        <HeroBackground />
+        <div className="relative z-10 w-full max-w-5xl mx-auto px-6 pb-16">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7, delay: 0.2 }}
+          >
+            <span className="label-gold block mb-4">Discover</span>
+            <h2 className="font-display text-[40px] sm:text-[52px] text-text-primary leading-[1.1] mb-4">
+              The Story<br />Behind Every<br />Masterpiece
+            </h2>
+            <p className="text-text-secondary text-sm max-w-sm mb-8 leading-relaxed">
+              Point your lens at any monument, artwork, or cultural landmark and unveil centuries of history.
+            </p>
+            <div className="flex gap-3 flex-wrap">
+              <label className="inline-flex items-center gap-2 px-8 py-3.5 border border-gold text-gold bg-transparent hover:bg-gold hover:text-background transition-all duration-300 cursor-pointer font-sans text-xs uppercase tracking-widest font-medium">
+                Upload Artwork
+                <input type="file" className="hidden" accept="image/*" onChange={handleFileSelect} />
+              </label>
+              <label className="inline-flex items-center gap-2 px-8 py-3.5 bg-gold text-background hover:bg-gold-light transition-all duration-300 cursor-pointer font-sans text-xs uppercase tracking-widest font-medium">
+                Use Camera
+                <input type="file" className="hidden" accept="image/*" capture="environment" onChange={handleFileSelect} />
+              </label>
+            </div>
+          </motion.div>
+        </div>
+      </section>
 
-      {/* Subtle particles */}
-      <div className="particles-container">
-        {particles.map((style, i) => (
-          <div key={i} className="particle" style={style} />
-        ))}
-      </div>
-
-      {/* Content */}
-      <div className="relative z-10 px-4 pb-8 max-w-[600px] mx-auto">
-
-        {/* ─── App Header ─────────────────────────────────────────────── */}
-        <motion.header
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="flex items-center justify-between py-3 mb-4"
-        >
-          <h1 className="text-lg font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-secondary">
-            🔮 Cultural Lens
-          </h1>
-          <button className="p-2 text-gray-500 hover:text-gray-300 transition-colors">
-            <Settings size={18} />
-          </button>
-        </motion.header>
-
-        {/* ─── Top Section: Upload + Camera cards ─────────────────────── */}
+      {/* ─── Nearby Wonders Section ─────────────────────────────────── */}
+      <section className="max-w-5xl mx-auto px-6 py-16">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.15 }}
-          className="grid grid-cols-2 gap-3 mb-6"
+          transition={{ duration: 0.6, delay: 0.5 }}
         >
-          {/* Upload Photo Card */}
-          <label className="group relative h-[180px] rounded-2xl border-2 border-dashed border-primary/40 bg-primary/5 backdrop-blur-sm
-                            flex flex-col items-center justify-center gap-3 cursor-pointer
-                            hover:border-primary hover:bg-primary/10 hover:scale-[1.02] active:scale-[0.98]
-                            transition-all duration-200 overflow-hidden">
-            <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center group-hover:bg-primary/30 transition-colors">
-              <Upload size={24} className="text-primary" />
-            </div>
-            <span className="text-white font-semibold text-sm">Upload Photo</span>
-            <span className="text-gray-400 text-xs">From your gallery</span>
-            <input type="file" className="hidden" accept="image/*" onChange={handleFileSelect} />
-          </label>
+          <div className="divider-gold mb-6" />
 
-          {/* Use Camera Card */}
-          <label className="group relative h-[180px] rounded-2xl border-2 border-dashed border-secondary/40 bg-secondary/5 backdrop-blur-sm
-                            flex flex-col items-center justify-center gap-3 cursor-pointer
-                            hover:border-secondary hover:bg-secondary/10 hover:scale-[1.02] active:scale-[0.98]
-                            transition-all duration-200 overflow-hidden">
-            <div className="w-12 h-12 rounded-full bg-secondary/20 flex items-center justify-center group-hover:bg-secondary/30 transition-colors">
-              <Camera size={24} className="text-secondary" />
-            </div>
-            <span className="text-white font-semibold text-sm">Use Camera</span>
-            <span className="text-gray-400 text-xs">Take a photo</span>
-            <input type="file" className="hidden" accept="image/*" capture="environment" onChange={handleFileSelect} />
-          </label>
-        </motion.div>
+          {/* Section header with clickable location badge */}
+          <div className="flex items-baseline justify-between mb-2">
+            <h2 className="font-display text-3xl sm:text-4xl text-text-primary">Nearby Wonders</h2>
 
-        {/* ─── Bottom Section: Nearby Wonders ──────────────────────────── */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.3 }}
-        >
-          {/* Header row */}
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-xl font-bold text-white">Nearby Wonders</h2>
-            {cityName && (
-              <span className="flex items-center gap-1 text-xs text-gray-400 bg-white/5 border border-white/10 px-2.5 py-1 rounded-full">
-                <MapPin size={12} className="text-secondary" />
-                {cityName}
-              </span>
-            )}
+            <button
+              onClick={() => setLocationPickerOpen(true)}
+              className="flex items-center gap-1.5 group"
+            >
+              <AnimatePresence mode="wait">
+                <motion.span
+                  key={cityName}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.3 }}
+                  className="label-gold flex items-center gap-1"
+                >
+                  <span className="text-xs">📍</span> {cityName}
+                </motion.span>
+              </AnimatePresence>
+              <Pencil size={11} className="text-gold/40 group-hover:text-gold transition-colors" />
+            </button>
           </div>
 
+          <div className="divider-gold mb-8" />
+
           {/* Place cards scroll row */}
-          <div className="overflow-x-auto -mx-4 px-4 pb-2 scrollbar-hide">
-            <div className="flex gap-3">
+          <div className="overflow-x-auto -mx-6 px-6 pb-4 scrollbar-hide">
+            <div className="flex gap-4">
               {placesLoading &&
                 [...Array(6)].map((_, i) => <SkeletonCard key={i} index={i} />)}
 
@@ -279,26 +271,29 @@ const DiscoveryScreen = ({ onAnalyzeImage, onAnalyzePlace }) => {
                 ))}
 
               {!placesLoading && places.length === 0 && !placesError && (
-                <div className="w-full py-12 text-center text-gray-500 text-sm">
-                  No cultural sites found nearby. Try uploading a photo instead!
-                </div>
+                <p className="text-text-muted text-sm py-12 font-sans">
+                  No cultural sites found nearby. Try uploading a photo instead.
+                </p>
               )}
 
               {placesError && (
-                <div className="w-full py-8 text-center flex flex-col items-center gap-3">
-                  <p className="text-gray-500 text-sm">{placesError}</p>
-                  <button
-                    onClick={() => window.location.reload()}
-                    className="flex items-center gap-1.5 text-xs text-secondary border border-secondary/30 px-3 py-1.5 rounded-full hover:bg-secondary/10 transition-colors"
-                  >
-                    <RefreshCw size={12} /> Retry
-                  </button>
-                </div>
+                <p className="text-text-muted text-sm py-8 font-sans italic">{placesError}</p>
               )}
             </div>
           </div>
         </motion.div>
-      </div>
+      </section>
+
+      {/* ─── Location Picker ────────────────────────────────────────── */}
+      <LocationPicker
+        isOpen={locationPickerOpen}
+        onClose={() => setLocationPickerOpen(false)}
+        onSelectCity={setManualLocation}
+        onUseGPS={() => {
+          resetToGPS();
+          setLocationPickerOpen(false);
+        }}
+      />
 
       {/* ─── Image Preview Overlay ──────────────────────────────────── */}
       <AnimatePresence>

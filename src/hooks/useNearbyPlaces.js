@@ -1,56 +1,43 @@
 import { useState, useEffect } from 'react';
-import { fetchNearbyPlaces, fetchCityName, calculateDistance } from '../utils/nearbyPlaces';
+import { fetchNearbyPlaces } from '../utils/nearbyPlaces';
 
-export const useNearbyPlaces = () => {
+/**
+ * Fetches nearby cultural places for a given {lat, lng} location.
+ * Re-fetches whenever location changes.
+ */
+export const useNearbyPlaces = (location) => {
   const [places, setPlaces] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [cityName, setCityName] = useState('');
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    if (!navigator.geolocation) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setError('Geolocation is not supported by your browser.');
-      setLoading(false);
-      return;
-    }
+    if (!location) return;
 
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        const { latitude, longitude } = position.coords;
+    let cancelled = false;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setLoading(true);
+     
+    setError(null);
+     
+    setPlaces([]);
 
-        // Get city name
-        const city = await fetchCityName(latitude, longitude);
-        setCityName(city);
-
-        // Get nearby places
-        try {
-          const raw = await fetchNearbyPlaces(latitude, longitude);
-
-          // Add distance + sort + take top 8
-          const withDistance = raw
-            .map((p) => ({
-              ...p,
-              distance: calculateDistance(latitude, longitude, p.lat, p.lng),
-            }))
-            .sort((a, b) => a.distance - b.distance)
-            .slice(0, 8);
-
-          setPlaces(withDistance);
-        } catch (err) {
+    (async () => {
+      try {
+        const raw = await fetchNearbyPlaces(location.lat, location.lng);
+        if (cancelled) return;
+        setPlaces(raw.slice(0, 8));
+      } catch (err) {
+        if (!cancelled) {
           console.error('Nearby places error:', err);
           setError('Could not fetch nearby places.');
         }
+      }
 
-        setLoading(false);
-      },
-      () => {
-        setError('Location access denied. Enable location to see nearby wonders.');
-        setLoading(false);
-      },
-      { enableHighAccuracy: false, timeout: 15000 }
-    );
-  }, []);
+      if (!cancelled) setLoading(false);
+    })();
 
-  return { places, loading, cityName, error };
+    return () => { cancelled = true; };
+  }, [location]);
+
+  return { places, loading, error };
 };

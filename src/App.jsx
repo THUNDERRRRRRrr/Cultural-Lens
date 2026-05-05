@@ -5,13 +5,10 @@ import ExperienceScreen from './components/ExperienceScreen';
 import { useAnalyzer } from './hooks/useAnalyzer';
 
 function App() {
-  // 'discovery' | 'experience'
   const [currentScreen, setCurrentScreen] = useState('discovery');
   const [capturedImage, setCapturedImage] = useState(null);
 
   const { analyzeImage, analyzeByName, loading, error, result, setResult, setError, usedAPI } = useAnalyzer();
-
-  // ── Upload / Camera flow ────────────────────────────────────────────────
 
   const handleAnalyzeImage = async (file, previewUrl) => {
     setCapturedImage(previewUrl);
@@ -19,15 +16,11 @@ function App() {
     setCurrentScreen('experience');
   };
 
-  // ── Nearby place card flow ──────────────────────────────────────────────
-
   const handleAnalyzePlace = async (placeName, lat, lng) => {
-    setCapturedImage(null); // no image for place cards
+    setCapturedImage(null);
     await analyzeByName(placeName, lat, lng);
     setCurrentScreen('experience');
   };
-
-  // ── Navigation ──────────────────────────────────────────────────────────
 
   const handleBackToDiscovery = () => {
     setCurrentScreen('discovery');
@@ -37,20 +30,54 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-background text-white font-sans overflow-x-hidden">
+    <div className="min-h-screen bg-background text-text-primary font-sans overflow-x-hidden">
 
-      {/* ─── Loading Overlay ──────────────────────────────────────────── */}
+      {/* Grain overlay — cinematic film texture */}
+      <div className="grain-overlay" />
+
+      {/* ─── App Header ───────────────────────────────────────────────── */}
+      <header className="fixed top-0 left-0 right-0 z-40 bg-background/95 backdrop-blur-md border-b border-border-subtle">
+        <div className="max-w-5xl mx-auto px-6 h-[60px] flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-[1px] h-5 bg-gold" />
+            <span className="font-display italic text-gold text-xl tracking-wide">Cultural Lens</span>
+          </div>
+          <nav className="hidden sm:flex items-center gap-6">
+            <button
+              onClick={() => { if (currentScreen !== 'discovery') handleBackToDiscovery(); }}
+              className="text-text-secondary hover:text-gold transition-colors text-[11px] uppercase tracking-[0.15em] font-sans font-medium"
+            >
+              Discover
+            </button>
+            <label className="text-text-secondary hover:text-gold transition-colors text-[11px] uppercase tracking-[0.15em] font-sans font-medium cursor-pointer">
+              Upload
+              <input type="file" className="hidden" accept="image/*" onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) handleAnalyzeImage(file, URL.createObjectURL(file));
+              }} />
+            </label>
+            <span className="text-text-muted text-[11px] uppercase tracking-[0.15em] font-sans font-medium cursor-default">
+              About
+            </span>
+          </nav>
+        </div>
+      </header>
+
+      {/* Spacer for fixed header */}
+      <div className="h-[60px]" />
+
+      {/* ─── Loading Overlay — museum loader ──────────────────────────── */}
       <AnimatePresence>
         {loading && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[60] flex items-center justify-center bg-black/85 backdrop-blur-sm"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-background/90 backdrop-blur-sm"
           >
-            <div className="flex flex-col items-center gap-5">
-              <div className="w-16 h-16 border-4 border-primary border-t-secondary rounded-full animate-spin" />
-              <p className="text-xl font-light text-white tracking-widest animate-pulse">
+            <div className="flex flex-col items-center gap-6">
+              <div className="museum-loader" />
+              <p className="font-display italic text-gold/70 text-lg tracking-wide">
                 Unveiling history…
               </p>
             </div>
@@ -65,16 +92,15 @@ function App() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[60] flex items-center justify-center bg-black/85 backdrop-blur-sm p-4"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-background/90 backdrop-blur-sm p-6"
           >
-            <div className="bg-white/10 border border-red-500/50 p-8 rounded-2xl max-w-md w-full text-center shadow-[0_0_50px_rgba(239,68,68,0.2)]">
-              <h3 className="text-2xl font-bold text-red-400 mb-4">Discovery Paused</h3>
-              <p className="text-gray-300 mb-8">{error}</p>
+            <div className="border border-border-subtle bg-bg-card p-10 max-w-md w-full text-center">
+              <p className="font-display italic text-text-primary text-lg mb-6">{error}</p>
               <button
                 onClick={handleBackToDiscovery}
-                className="px-6 py-2.5 bg-white/10 hover:bg-white/20 border border-gray-600 rounded-full transition-colors"
+                className="px-6 py-2.5 border border-gold text-gold text-xs uppercase tracking-widest font-sans hover:bg-gold hover:text-background transition-all duration-300"
               >
-                Try Again
+                Return
               </button>
             </div>
           </motion.div>

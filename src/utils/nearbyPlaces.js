@@ -100,21 +100,28 @@ export async function fetchCityName(lat, lng) {
   }
 }
 
-/**
- * Haversine distance in km.
- */
-export function calculateDistance(lat1, lon1, lat2, lon2) {
-  const R = 6371;
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLon = ((lon2 - lon1) * Math.PI) / 180;
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLon / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
 
-export function formatDistance(km) {
-  return km < 1 ? `${Math.round(km * 1000)}m` : `${km.toFixed(1)}km`;
+/**
+ * Search cities via Nominatim (free, no key).
+ * @param {string} query
+ * @returns {Promise<Array<{name: string, displayName: string, lat: number, lng: number}>>}
+ */
+export async function searchCities(query) {
+  if (!query || query.length < 2) return [];
+  try {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=5&addressdetails=1`,
+      { headers: { 'User-Agent': 'CulturalLens/1.0' } }
+    );
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data.map((item) => ({
+      name: item.address?.city || item.address?.town || item.address?.village || item.name || query,
+      displayName: item.display_name,
+      lat: parseFloat(item.lat),
+      lng: parseFloat(item.lon),
+    }));
+  } catch {
+    return [];
+  }
 }
