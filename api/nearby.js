@@ -14,8 +14,11 @@ export default async function handler(req, res) {
   try {
     const response = await fetch('https://overpass-api.de/api/interpreter', {
       method: 'POST',
-      body: query,
-      headers: { 'Content-Type': 'text/plain' }
+      body: `data=${encodeURIComponent(query)}`,
+      headers: { 
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'User-Agent': 'CulturalLens/1.0'
+      }
     });
     if (!response.ok) {
       throw new Error(`Overpass returned HTTP ${response.status}`);
