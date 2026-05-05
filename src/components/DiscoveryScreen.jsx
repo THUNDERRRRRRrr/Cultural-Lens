@@ -164,7 +164,7 @@ const ImagePreviewOverlay = ({ previewUrl, onDiscover, onClose }) => (
 
 const DiscoveryScreen = ({ onAnalyzeImage, onAnalyzePlace }) => {
   const { location, cityName, setManualLocation, resetToGPS } = useLocation();
-  const { places, loading: placesLoading, error: placesError } = useNearbyPlaces(location);
+  const { places, loading: placesLoading, error: placesError } = useNearbyPlaces(location, cityName);
   const shouldReduce = useReducedMotion();
 
   const [selectedFile, setSelectedFile] = useState(null);

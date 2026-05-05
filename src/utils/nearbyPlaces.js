@@ -1,19 +1,34 @@
-export async function fetchNearbyPlaces(lat, lng) {
+import { getPlacesForCity } from '../data/cityPlaces';
+
+export async function fetchNearbyPlaces(lat, lng, cityName) {
+  // Tier 1: Check curated database (instant, no network)
+  const curated = getPlacesForCity(cityName);
+  if (curated) {
+    return curated.map((place, index) => ({
+      id: `${place.name.replace(/\s+/g, '-').toLowerCase()}-${index}`,
+      name: place.name,
+      lat: lat,
+      lng: lng,
+      type: place.type,
+      typeIcon: place.typeIcon,
+    }));
+  }
+
+  // Tier 2: Unknown city — discover places live from OpenStreetMap
   try {
-    const response = await fetch(
-      `/api/nearby?lat=${lat}&lng=${lng}`
-    );
+    const response = await fetch(`/api/nearby?lat=${lat}&lng=${lng}`);
     if (!response.ok) {
       console.error('Nearby API error:', response.status);
       return [];
     }
     const data = await response.json();
     if (!data || !Array.isArray(data.elements)) {
-      console.error('Unexpected response:', data);
+      console.error('Unexpected Overpass response:', data);
       return [];
     }
     return data.elements
       .filter((el) => el.tags?.name)
+      .slice(0, 12)
       .map((el) => ({
         id: el.id,
         name: el.tags.name,
@@ -23,7 +38,7 @@ export async function fetchNearbyPlaces(lat, lng) {
         typeIcon: getPlaceTypeIcon(el.tags),
       }));
   } catch (err) {
-    console.error('fetchNearbyPlaces failed:', err);
+    console.error('fetchNearbyPlaces fallback failed:', err);
     return [];
   }
 }

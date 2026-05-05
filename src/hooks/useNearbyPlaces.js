@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { fetchNearbyPlaces } from '../utils/nearbyPlaces';
 
-export const useNearbyPlaces = (location) => {
+export const useNearbyPlaces = (location, cityName) => {
   const [places, setPlaces] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -19,19 +19,19 @@ export const useNearbyPlaces = (location) => {
 
     (async () => {
       try {
-        const raw = await fetchNearbyPlaces(lat, lng);
-        if (!cancelled) setPlaces(raw.slice(0, 8));
+        const raw = await fetchNearbyPlaces(lat, lng, cityName);
+        if (!cancelled) setPlaces(raw);
       } catch (err) {
         if (!cancelled) {
           console.error('Nearby places error:', err);
-          setError('Could not fetch nearby places.');
+          setError('Could not load places.');
         }
       }
       if (!cancelled) setLoading(false);
     })();
 
     return () => { cancelled = true; };
-  }, [lat, lng]);
+  }, [lat, lng, cityName]);
 
   return { places, loading, error };
 };

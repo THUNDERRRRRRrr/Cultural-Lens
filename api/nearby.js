@@ -9,13 +9,13 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'lat and lng are required' });
   }
 
-  const query = `[out:json][timeout:15];(node["tourism"~"museum|attraction|artwork|monument|gallery"](around:3000,${lat},${lng});node["historic"~"monument|memorial|ruins|castle|building"](around:3000,${lat},${lng});node["amenity"~"place_of_worship"](around:3000,${lat},${lng}););out 12;`;
+  const query = `[out:json][timeout:15];(node["tourism"~"museum|attraction|artwork|monument|gallery"](around:5000,${lat},${lng});node["historic"~"monument|memorial|ruins|castle|building"](around:5000,${lat},${lng});node["amenity"~"place_of_worship"](around:5000,${lat},${lng}););out 12;`;
 
   try {
     const response = await fetch('https://overpass-api.de/api/interpreter', {
       method: 'POST',
       body: `data=${encodeURIComponent(query)}`,
-      headers: { 
+      headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
         'User-Agent': 'CulturalLens/1.0'
       }
