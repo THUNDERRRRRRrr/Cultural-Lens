@@ -9,10 +9,11 @@ import LocationPicker from './LocationPicker';
 // ─── Ken Burns hero images (Wikimedia Commons, free) ─────────────────────────
 
 const HERO_IMAGES = [
-  'https://upload.wikimedia.org/wikipedia/commons/thumb/e/ec/Mona_Lisa%2C_by_Leonardo_da_Vinci%2C_from_C2RMF_retouched.jpg/800px-Mona_Lisa%2C_by_Leonardo_da_Vinci%2C_from_C2RMF_retouched.jpg',
-  'https://upload.wikimedia.org/wikipedia/commons/thumb/3/30/Vincent_van_Gogh_-_Starry_Night_-_Google_Art_Project.jpg/1280px-Vincent_van_Gogh_-_Starry_Night_-_Google_Art_Project.jpg',
-  'https://upload.wikimedia.org/wikipedia/commons/thumb/f/f4/The_Scream.jpg/800px-The_Scream.jpg',
-  'https://upload.wikimedia.org/wikipedia/commons/thumb/1/1e/Vittore_Carpaccio_-_The_Legend_of_Saint_Ursula_-_WGA04311.jpg/1280px-Vittore_Carpaccio_-_The_Legend_of_Saint_Ursula_-_WGA04311.jpg',
+  'https://images.unsplash.com/photo-1564507592333-c60657eea523?w=1280&q=80',
+  'https://images.unsplash.com/photo-1548013146-72479768bada?w=1280&q=80',
+  'https://images.unsplash.com/photo-1467269204594-9661b134dd2b?w=1280&q=80',
+  'https://images.unsplash.com/photo-1541961017774-22349e4a1262?w=1280&q=80',
+  'https://images.unsplash.com/photo-1518998053901-5348d3961a04?w=1280&q=80',
 ];
 
 // ─── Hero Background ─────────────────────────────────────────────────────────

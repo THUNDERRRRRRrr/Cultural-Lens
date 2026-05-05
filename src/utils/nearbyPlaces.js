@@ -3,19 +3,36 @@
  * Free, no API key needed.
  */
 export async function fetchNearbyPlaces(lat, lng) {
-  const response = await fetch(`/api/nearby?lat=${lat}&lng=${lng}`);
-  const data = await response.json();
+  try {
+    const response = await fetch(`/api/nearby?lat=${lat}&lng=${lng}`);
 
-  return data.elements
-    .filter((el) => el.tags?.name)
-    .map((el) => ({
-      id: el.id,
-      name: el.tags.name,
-      lat: el.lat,
-      lng: el.lon,
-      type: getPlaceType(el.tags),
-      typeIcon: getPlaceTypeIcon(el.tags),
-    }));
+    if (!response.ok) {
+      console.error('Nearby API error:', response.status, await response.text());
+      return [];
+    }
+
+    const data = await response.json();
+
+    // Guard: elements may be undefined if Overpass returned an error
+    if (!data || !Array.isArray(data.elements)) {
+      console.error('Unexpected Overpass response:', data);
+      return [];
+    }
+
+    return data.elements
+      .filter((el) => el.tags?.name)
+      .map((el) => ({
+        id: el.id,
+        name: el.tags.name,
+        lat: el.lat,
+        lng: el.lon,
+        type: getPlaceType(el.tags),
+        typeIcon: getPlaceTypeIcon(el.tags),
+      }));
+  } catch (err) {
+    console.error('fetchNearbyPlaces failed:', err);
+    return [];
+  }
 }
 
 function getPlaceType(tags) {
@@ -53,7 +70,7 @@ function getPlaceTypeIcon(tags) {
 export async function fetchPlacePhoto(placeName) {
   try {
     const res = await fetch(
-      `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(placeName)}`
+      `/api/photo?name=${encodeURIComponent(placeName)}`
     );
     if (!res.ok) return null;
     const data = await res.json();
