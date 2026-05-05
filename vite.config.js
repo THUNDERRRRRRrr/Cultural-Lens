@@ -4,7 +4,17 @@ import react from '@vitejs/plugin-react'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
-  server: {
-    host: true, // Expose on local network so phones can connect
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('framer-motion')) return 'framer';
+          if (id.includes('node_modules/react') || id.includes('node_modules/react-dom')) return 'vendor';
+        }
+      }
+    }
   },
+  server: {
+    host: true,
+  }
 })

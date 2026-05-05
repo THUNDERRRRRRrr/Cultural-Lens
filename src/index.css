@@ -183,3 +183,53 @@
   background: rgba(201, 169, 110, 0.15);
   width: 100%;
 }
+
+/* ─── Mobile Performance & UI Polish ──────────────────────────────────────── */
+
+* {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+button, [role="button"], label {
+  cursor: pointer;
+  user-select: none;
+}
+
+.glass-card {
+  background: rgba(20, 20, 20, 0.92);
+}
+
+@supports (backdrop-filter: blur(8px)) {
+  @media (min-width: 768px) {
+    .glass-card {
+      background: rgba(20, 20, 20, 0.7);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+    }
+  }
+}
+
+@media (max-width: 767px) {
+  .font-display {
+    font-size: clamp(32px, 8vw, 52px);
+  }
+  h2.font-display {
+    line-height: 1.15;
+  }
+  
+  .voice-controls {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 50;
+    height: 56px;
+    background: rgba(13,13,13,0.97);
+    border-top: 1px solid rgba(201,169,110,0.2);
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    padding: 0 24px;
+  }
+}

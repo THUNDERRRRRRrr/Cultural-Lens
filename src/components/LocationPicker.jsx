@@ -99,7 +99,7 @@ const LocationPicker = ({ isOpen, onClose, onSelectCity, onUseGPS }) => {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 z-[60] bg-black/80 backdrop-blur-sm"
+            className="fixed inset-0 z-[60] glass-card"
           />
 
           {/* Bottom sheet */}

@@ -36,7 +36,7 @@ function App() {
       <div className="grain-overlay" />
 
       {/* ─── App Header ───────────────────────────────────────────────── */}
-      <header className="fixed top-0 left-0 right-0 z-40 bg-background/95 backdrop-blur-md border-b border-border-subtle">
+      <header className="fixed top-0 left-0 right-0 z-40 glass-card border-b border-border-subtle">
         <div className="max-w-5xl mx-auto px-6 h-[60px] flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-[1px] h-5 bg-gold" />
@@ -73,7 +73,7 @@ function App() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-background/90 backdrop-blur-sm"
+            className="fixed inset-0 z-50 flex items-center justify-center glass-card"
           >
             <div className="flex flex-col items-center gap-6">
               <div className="museum-loader" />
@@ -92,7 +92,7 @@ function App() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-background/90 backdrop-blur-sm p-6"
+            className="fixed inset-0 z-50 flex items-center justify-center glass-card p-6"
           >
             <div className="border border-border-subtle bg-bg-card p-10 max-w-md w-full text-center">
               <p className="font-display italic text-text-primary text-lg mb-6">{error}</p>
