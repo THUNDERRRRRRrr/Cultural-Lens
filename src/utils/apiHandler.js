@@ -3,11 +3,12 @@ import { generateHash } from './imageUtils';
 
 const SYSTEM_PROMPT = `You are a world-class immersive cultural narrator for a tourism app. 
 Analyze the image and respond ONLY in this exact JSON format with no 
-markdown, no backticks, no extra text:
+markdown, no backticks, no extra text.
+IMPORTANT: Use \\n\\n for paragraph breaks. Do NOT use actual literal newlines inside the JSON strings!
 {
   "name": "Monument or place name",
   "location": "City, Country",
-  "narration": "Three paragraphs of cinematic, emotional, immersive narration about this place. Write like a movie narrator — evocative, dramatic, inspiring. Minimum 200 words.",
+  "narration": "Three paragraphs of cinematic, emotional, immersive narration about this place. Write like a movie narrator — evocative, dramatic, inspiring. Minimum 200 words. Use \\n\\n for breaks.",
   "funFacts": ["fact 1", "fact 2", "fact 3"],
   "timeline": [
     {"year": "year", "event": "what happened"},
@@ -32,20 +33,27 @@ function parseMonumentResponse(rawText) {
 
   try {
     return JSON.parse(text);
-  } catch {
-    // The JSON may be truncated — try to repair by closing open strings/objects
-    // Remove any trailing incomplete key-value pair
-    text = text.replace(/,\s*"[^"]*"?\s*:?\s*"?[^}]*$/, '');
+  } catch (e1) {
+    try {
+      // Fallback 1: The LLM may have used literal newlines/tabs inside strings.
+      // We replace all control characters with spaces to make it parsable.
+      const sanitized = text.replace(/[\n\r\t]/g, ' ');
+      return JSON.parse(sanitized);
+    } catch (e2) {
+      // Fallback 2: The JSON may be truncated — try to repair by closing open strings/objects
+      // Remove any trailing incomplete key-value pair
+      text = text.replace(/,\s*"[^"]*"?\s*:?\s*"?[^}]*$/, '');
     // Close any unclosed strings, arrays, objects
     const opens = (text.match(/{/g) || []).length;
     const closes = (text.match(/}/g) || []).length;
     const arrOpens = (text.match(/\[/g) || []).length;
     const arrCloses = (text.match(/]/g) || []).length;
-    // Close trailing open string if needed
-    if ((text.match(/"/g) || []).length % 2 !== 0) text += '"';
-    for (let i = 0; i < arrOpens - arrCloses; i++) text += ']';
-    for (let i = 0; i < opens - closes; i++) text += '}';
-    return JSON.parse(text);
+      // Close trailing open string if needed
+      if ((text.match(/"/g) || []).length % 2 !== 0) text += '"';
+      for (let i = 0; i < arrOpens - arrCloses; i++) text += ']';
+      for (let i = 0; i < opens - closes; i++) text += '}';
+      return JSON.parse(text);
+    }
   }
 }
 
@@ -207,11 +215,12 @@ export async function analyzeMonument(base64Image) {
 
 const PLACE_PROMPT = `You are a world-class immersive cultural narrator for a tourism app.
 I will tell you the name and coordinates of a cultural site. Respond ONLY in this exact JSON format with no
-markdown, no backticks, no extra text:
+markdown, no backticks, no extra text.
+IMPORTANT: Use \\n\\n for paragraph breaks. Do NOT use actual literal newlines inside the JSON strings!
 {
   "name": "Monument or place name",
   "location": "City, Country",
-  "narration": "Three paragraphs of cinematic, emotional, immersive narration about this place. Write like a movie narrator — evocative, dramatic, inspiring. Minimum 200 words.",
+  "narration": "Three paragraphs of cinematic, emotional, immersive narration about this place. Write like a movie narrator — evocative, dramatic, inspiring. Minimum 200 words. Use \\n\\n for breaks.",
   "funFacts": ["fact 1", "fact 2", "fact 3"],
   "timeline": [
     {"year": "year", "event": "what happened"},
