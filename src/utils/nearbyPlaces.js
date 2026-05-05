@@ -1,25 +1,17 @@
-/**
- * Fetch nearby cultural places from OpenStreetMap Overpass API via proxy.
- */
 export async function fetchNearbyPlaces(lat, lng) {
   try {
-    const query = `[out:json][timeout:10];
-    (
-      node["tourism"~"museum|attraction|artwork|monument|gallery"](around:3000,${lat},${lng});
-      node["historic"~"monument|memorial|ruins|castle|building"](around:3000,${lat},${lng});
-      node["amenity"~"place_of_worship"](around:3000,${lat},${lng});
+    const response = await fetch(
+      `/api/nearby?lat=${lat}&lng=${lng}`
     );
-    out 12;`;
-
-    const overpassUrl = `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`;
-    const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(overpassUrl)}`;
-
-    const response = await fetch(proxyUrl);
-    const wrapper = await response.json();
-    const data = JSON.parse(wrapper.contents);
-
-    if (!data || !Array.isArray(data.elements)) return [];
-
+    if (!response.ok) {
+      console.error('Nearby API error:', response.status);
+      return [];
+    }
+    const data = await response.json();
+    if (!data || !Array.isArray(data.elements)) {
+      console.error('Unexpected response:', data);
+      return [];
+    }
     return data.elements
       .filter((el) => el.tags?.name)
       .map((el) => ({
@@ -34,6 +26,45 @@ export async function fetchNearbyPlaces(lat, lng) {
     console.error('fetchNearbyPlaces failed:', err);
     return [];
   }
+}
+
+export async function fetchCityName(lat, lng) {
+  try {
+    const res = await fetch(`/api/geocode?lat=${lat}&lng=${lng}`);
+    if (!res.ok) return '';
+    const data = await res.json();
+    return data.address?.city || data.address?.town ||
+           data.address?.village || data.address?.county || '';
+  } catch { return ''; }
+}
+
+export async function searchCities(query) {
+  if (!query || query.length < 2) return [];
+  try {
+    const res = await fetch(
+      `/api/search?q=${encodeURIComponent(query)}`
+    );
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data.map((item) => ({
+      name: item.address?.city || item.address?.town ||
+            item.address?.village || item.name || query,
+      displayName: item.display_name,
+      lat: parseFloat(item.lat),
+      lng: parseFloat(item.lon),
+    }));
+  } catch { return []; }
+}
+
+export async function fetchPlacePhoto(placeName) {
+  try {
+    const res = await fetch(
+      `/api/photo?name=${encodeURIComponent(placeName)}`
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.thumbnail?.source ?? null;
+  } catch { return null; }
 }
 
 function getPlaceType(tags) {
@@ -60,51 +91,4 @@ function getPlaceTypeIcon(tags) {
     return '⛪';
   }
   return '🏛️';
-}
-
-export async function fetchCityName(lat, lng) {
-  try {
-    const nominatimUrl = 
-      `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`;
-    const proxyUrl = 
-      `https://api.allorigins.win/get?url=${encodeURIComponent(nominatimUrl)}`;
-    const res = await fetch(proxyUrl);
-    const wrapper = await res.json();
-    const data = JSON.parse(wrapper.contents);
-    return data.address?.city || data.address?.town || 
-           data.address?.village || data.address?.county || '';
-  } catch { return ''; }
-}
-
-export async function searchCities(query) {
-  if (!query || query.length < 2) return [];
-  try {
-    const nominatimUrl = 
-      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=5&addressdetails=1`;
-    const proxyUrl = 
-      `https://api.allorigins.win/get?url=${encodeURIComponent(nominatimUrl)}`;
-    const res = await fetch(proxyUrl);
-    const wrapper = await res.json();
-    const data = JSON.parse(wrapper.contents);
-    return data.map((item) => ({
-      name: item.address?.city || item.address?.town || 
-            item.address?.village || item.name || query,
-      displayName: item.display_name,
-      lat: parseFloat(item.lat),
-      lng: parseFloat(item.lon),
-    }));
-  } catch { return []; }
-}
-
-export async function fetchPlacePhoto(placeName) {
-  try {
-    const wikiUrl = 
-      `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(placeName)}`;
-    const proxyUrl = 
-      `https://api.allorigins.win/get?url=${encodeURIComponent(wikiUrl)}`;
-    const res = await fetch(proxyUrl);
-    const wrapper = await res.json();
-    const data = JSON.parse(wrapper.contents);
-    return data.thumbnail?.source ?? null;
-  } catch { return null; }
 }
